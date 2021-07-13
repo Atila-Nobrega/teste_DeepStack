@@ -2,6 +2,7 @@ from imutils.video import VideoStream
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from starlette.status import HTTP_201_CREATED
 import threading
 import cv2
 from starlette.responses import StreamingResponse
@@ -14,6 +15,8 @@ cap = cv2.VideoCapture("http://187.19.204.20/mjpg/video.mjpg")
 
 config = ServerConfig("http://localhost:80")
 detection = Detection(config)
+
+ativado = False
 
 
 # Iniciliza o frame de exibição
@@ -38,14 +41,14 @@ async def read_root(request: Request):
 
 def object_detection():
 	
-	global vs, saidaFrame, lock
+	global vs, saidaFrame, lock, ativado
 
 
 	while True:
 		
 		_, frame = cap.read()
 		#Mudar para True/False para Ativar/Desativar (Serve para teste de frames)
-		if(True):
+		if(ativado):
 			response = detection.detectObject(frame, min_confidence=0.4)
 			for obj in response:
 				cv2.rectangle(frame, (obj.x_min, obj.y_min), (obj.x_max, obj.y_max), (0,255,0), 1)
@@ -83,6 +86,19 @@ def generate():
 @app.get("/video_feed")
 async def video_feed():
 	return StreamingResponse(generate(), media_type="multipart/x-mixed-replace;boundary=frame")
+
+
+
+@app.get("/ativar")
+async def ativar_deteccao():
+	print("Clicou o")
+
+	global ativado
+
+	if ativado == False:
+		ativado = True
+	else:
+		ativado = False
 
 t = threading.Thread(target=object_detection)
 t.daemon = True
