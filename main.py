@@ -7,14 +7,15 @@ import threading
 import cv2
 from starlette.responses import StreamingResponse
 from deepstack_sdk import ServerConfig, Detection
-
+import requests
 
 cap = cv2.VideoCapture("http://187.19.204.20/mjpg/video.mjpg")
+#https://iihrwc02.iowa.uiowa.edu/axis-cgi/mjpg/video.cgi?resolution=704x480&dummy=garb
 #rtsp://wowzaec2demo.streamlock.net/vod/mp4:BigBuckBunny_115k.mov
 
 
 config = ServerConfig("http://localhost:80")
-detection = Detection(config)
+detection = Detection(config=config, name="carromoto")
 
 ativado = False
 
@@ -43,16 +44,18 @@ def object_detection():
 	
 	global vs, saidaFrame, lock, ativado
 
-
 	while True:
 		
 		_, frame = cap.read()
 		#Mudar para True/False para Ativar/Desativar (Serve para teste de frames)
 		if(ativado):
-			response = detection.detectObject(frame, min_confidence=0.4)
+			response = detection.detectObject(frame, min_confidence=0.3)
 			for obj in response:
+				print(obj.label)
 				cv2.rectangle(frame, (obj.x_min, obj.y_min), (obj.x_max, obj.y_max), (0,255,0), 1)
 				cv2.putText(frame, obj.label, (obj.x_max +10, obj.y_max), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255,0), 2)
+
+		
 
 		
 		# Determina o frame de exibição de forma que todos os clientes estejam sincronizados com a saida obtida
@@ -91,13 +94,13 @@ async def video_feed():
 
 @app.get("/ativar")
 async def ativar_deteccao():
-	print("Clicou o")
-
 	global ativado
 
 	if ativado == False:
+		print("detecção ativada")
 		ativado = True
 	else:
+		print("detecção desativada")
 		ativado = False
 
 t = threading.Thread(target=object_detection)
